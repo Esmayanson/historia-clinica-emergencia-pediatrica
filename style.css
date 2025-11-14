@@ -1,0 +1,229 @@
+/*
+ * Paleta de Colores:
+ * Fondo General (Beige Claro Cálido): #FBFBF9
+ * Fondo de Hoja (Blanco Puro): #FFFFFF
+ * Acento/Bordes (Azul Suave Profesional): #4A90E2
+ */
+
+body {
+    font-family: 'Lato', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #FBFBF9; /* Fondo General (Beige muy claro) */
+    color: #333333;
+    display: flex;
+    min-height: 100vh;
+}
+
+.container {
+    display: flex; /* Habilita el layout de dos columnas */
+    width: 95%; 
+    margin: 20px auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background-color: #FFFFFF; 
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* --- Columna Izquierda: Lista de Motivos (~30%) --- */
+.left-column {
+    flex: 0 0 300px; 
+    padding: 20px;
+    border-right: 1px solid #E0E0E0;
+    background-color: #F4F4F4; 
+    overflow-y: auto; 
+    max-height: calc(100vh - 40px);
+}
+
+.left-column h2 {
+    color: #4A90E2; 
+    border-bottom: 2px solid #4A90E2;
+    padding-bottom: 10px;
+    margin-top: 0;
+    font-weight: 700;
+}
+
+#motivos-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.motivo-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    transition: background-color 0.2s, color 0.2s;
+    font-size: 14px;
+}
+
+.motivo-item:hover {
+    background-color: #E6F3FF; 
+    color: #4A90E2;
+}
+
+.motivo-item.active {
+    background-color: #4A90E2; 
+    color: white;
+    font-weight: 700;
+}
+
+/* --- Columna Derecha: Área de Informe (70%) --- */
+.right-column {
+    flex-grow: 1; 
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background-color: #FFFFFF;
+}
+
+/* Barra de Herramientas (Toolbar) */
+.toolbar {
+    border: 1px solid #D0D0D0;
+    border-radius: 4px;
+    padding: 5px;
+    margin-bottom: 15px;
+    background-color: #F8F8F8;
+    display: flex;
+    gap: 5px;
+}
+
+.toolbar button {
+    background: none;
+    border: none;
+    color: #666666;
+    padding: 8px;
+    cursor: pointer;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.toolbar button:hover {
+    color: #4A90E2;
+    background-color: #E6F3FF;
+}
+
+/* Hoja del Informe */
+.informe-sheet {
+    flex-grow: 1;
+    padding: 30px;
+    border: 1px solid #D0D0D0;
+    border-radius: 4px;
+    background-color: #FFFFFF; 
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+#motivo-titulo {
+    color: #4A90E2;
+    border-bottom: 1px dashed #D0D0D0;
+    padding-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.informe-section h3 {
+    color: #333333;
+    border-left: 5px solid #4A90E2;
+    padding-left: 10px;
+    margin-top: 25px;
+    margin-bottom: 10px;
+}
+
+/* AJUSTE CLAVE: Altura para el campo de texto combinado */
+.informe-editor {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #D0D0D0;
+    border-radius: 4px;
+    resize: vertical;
+    box-sizing: border-box;
+    font-family: 'Lato', sans-serif;
+    font-size: 15px;
+    min-height: 350px; 
+}
+
+/* Pie de Página del Documento */
+.document-footer {
+    margin-top: 40px;
+    border-top: 1px solid #E0E0E0;
+    padding-top: 15px;
+    text-align: right;
+}
+
+.document-footer p {
+    font-size: 0.8em;
+    color: #4A90E2; 
+    margin: 0;
+}
+
+/* Botones de Acción */
+.action-buttons {
+    text-align: center;
+    padding: 10px 0;
+    border-top: 1px solid #E0E0E0;
+    flex-shrink: 0; 
+}
+
+.action-buttons button {
+    padding: 10px 20px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: background-color 0.2s;
+}
+
+.btn-restablecer {
+    background-color: #FFC107; 
+    color: #333333;
+}
+
+.btn-imprimir, .btn-guardar-pdf {
+    background-color: #4A90E2; 
+    color: white;
+}
+
+.btn-guardar-txt {
+    background-color: #9B59B6; 
+    color: white;
+}
+
+.action-buttons button:hover {
+    opacity: 0.9;
+}
+
+/* ======================================================= */
+/* 🟢 ESTILOS DE IMPRESIÓN (OCULTA LA INTERFAZ PARA PDF/PRINT) */
+/* ======================================================= */
+
+@media print {
+    /* Oculta la columna de la lista de motivos */
+    .left-column {
+        display: none;
+    }
+
+    /* Ajusta el contenedor para que la hoja ocupe todo el ancho */
+    .container {
+        width: 100%;
+        margin: 0;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    /* Oculta la barra de herramientas y los botones de acción */
+    .toolbar, .action-buttons {
+        display: none;
+    }
+
+    /* Permite que la hoja del informe se vea bien en la impresión */
+    .informe-sheet {
+        border: none;
+        padding: 0;
+        margin: 0;
+        overflow: visible;
+        /* Asegura que el contenido estire a lo ancho de la página impresa */
+        width: 100%; 
+    }
+}
