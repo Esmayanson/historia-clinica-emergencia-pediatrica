@@ -6,7 +6,7 @@
 
 const dataInformes = {
     "ALERGIAS": {
-        presentacion: "Se trata de paciente masculino sin antecedentes mórbidos, el cual se encontraba asintomático hasta el día de ayer, cuando empezó a presentar prurito intenso generalizado, lesiones eritematosas en cara, tronco y extremidades, que no ceden con el uso de Cetirizina en casa.",
+        presentacion: "sin antecedentes mórbidos, el cual se encontraba asintomático hasta el día de ayer, cuando empezó a presentar prurito intenso generalizado, lesiones eritematosas en cara, tronco y extremidades, que no ceden con el uso de Cetirizina en casa.",
         evolucion_ordenes: 
             "EVOLUCIÓN:\n" + 
             "Al examen físico: Afebril, eupneico, dolor, quejumbroso, agitado, con prurito intenso, lesiones jabonosas con eritema en todo el cuerpo. \n" +
@@ -361,4 +361,5 @@ const dataInformes = {
 // Lista de motivos de emergencia, extraída de las claves del objeto, ordenada alfabéticamente
 const motivosLista = Object.keys(dataInformes)
     .filter(key => key !== 'DIAGNOSTICO NO INCLUIDO EN DATA')
+
     .sort();
