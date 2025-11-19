@@ -3,68 +3,843 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Pediátrica de Emergencia</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Informe de Historia Clínica de Emergencia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        /* MANTENIENDO ESTILOS DINÁMICOS DEL TURNO ANTERIOR */
+        .informe-editor[contenteditable="true"] {
+            min-height: 150px; 
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            white-space: pre-wrap; 
+        }
+        #evolucion-ordenes-editor {
+             min-height: 350px; 
+        }
+        /* Ajuste de ancho para el input de peso superior */
+        .patient-controls input[type="number"] {
+            width: 40px; 
+        }
+        /* Estilos de botones de unidad en el header */
+        .unidad-selector button {
+            background-color: #E0E0E0;
+            color: #333;
+            border: none;
+            padding: 5px 8px; /* Reducido para el header */
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .unidad-selector button.activo {
+            background-color: #4CAF50; /* Verde */
+            color: white;
+        }
+
+    </style>
+    
+    <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-    <header>
-        <h1>Calculadora de Dosis Pediátrica</h1>
-    </header>
 
-    <main class="contenedor-principal">
-        <section class="columna columna-input">
-            <h2>Datos del Paciente y Selección</h2>
+    <div class="container">
+        <div class="left-column">
+            <h2>Motivos de Emergencia</h2>
+            <ul id="motivos-lista">
+                </ul>
+        </div>
 
-            <div class="bloque-input paciente-data">
-                <h3>Datos del Paciente</h3>
+        <div class="right-column">
+            
+            <div class="patient-controls">
+                <label>Género:</label>
+                <button id="btn-masculino" onclick="setGenero('M')" class="btn-gender active">Masculino</button>
+                <button id="btn-femenino" onclick="setGenero('F')" class="btn-gender">Femenino</button>
+
+                <label style="margin-left: 20px;">Edad:</label>
+                <input type="number" id="edad-input" min="0" value="1" oninput="aplicarVariables()">
+                <select id="unidad-select" onchange="aplicarVariables()">
+                    <option value="años">años</option>
+                    <option value="meses">meses</option>
+                </select>
+
+                <label style="margin-left: 20px;">Pariente:</label>
+                <select id="pariente-select" onchange="aplicarVariables()">
+                    <option value="madre">Madre</option>
+                    <option value="padre">Padre</option>
+                    <option value="tutor">Tutor</option>
+                </select>
                 
-                <label for="edad">Edad (años/meses):</label>
-                <input type="text" id="edad" placeholder="Ej. 2a 6m" required>
+                <label style="margin-left: 20px;">Peso:</label>
+                <input type="number" id="peso" placeholder="0.0" step="0.01" required value="10" oninput="aplicarVariables(); sincronizarPesoDisplay();">
+                <div class="unidad-selector">
+                    <button type="button" id="btn-lb" data-unidad="lb">lb</button>
+                    <button type="button" id="btn-kg" data-unidad="kg" class="activo">kg</button>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <button title="Negrita" onclick="formatDoc('bold')"><i class="fas fa-bold"></i></button>
+                <button title="Cursiva" onclick="formatDoc('italic')"><i class="fas fa-italic"></i></button>
+                <button title="Subrayado" onclick="formatDoc('underline')"><i class="fas fa-underline"></i></button>
+                <button title="Resaltado" onclick="formatDoc('backcolor', prompt('Color de Resaltado (ej: yellow):', 'yellow'))"><i class="fas fa-highlighter"></i></button>
+            </div>
+            
+            <div class="informe-sheet" id="informe-sheet">
+                <h1 id="motivo-titulo">Seleccione un Motivo</h1>
                 
-                <label for="peso">Peso:</label>
-                <div class="peso-container">
-                    <input type="number" id="peso" placeholder="0.0" step="0.01" required>
-                    <div class="unidad-selector">
-                        <button type="button" id="btn-lb" class="activo" data-unidad="lb">Libras (lb)</button>
-                        <button type="button" id="btn-kg" data-unidad="kg">Kilogramos (kg)</button>
-                    </div>
+                <section class="informe-section">
+                    <h3>Presentación de Caso 
+                        <button onclick="copiarContenido('presentacion-caso-editor')" class="btn-copy" title="Copiar Presentación">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </h3>
+                    <div id="presentacion-caso-editor" class="informe-editor" contenteditable="true"></div>
+                </section>
+                
+                <section class="informe-section">
+                    <h3>Evolución y Órdenes Médicas 
+                        <button onclick="copiarContenido('evolucion-ordenes-editor')" class="btn-copy" title="Copiar Evolución y Órdenes">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </h3>
+                    <div id="evolucion-ordenes-editor" class="informe-editor" contenteditable="true"></div>
+                </section>
+                
+                <div class="document-footer">
+                    <p>Creado por: Dr. Esmayanson de León</p>
                 </div>
             </div>
 
-            <div class="bloque-input medicamentos-list">
-                <h3>Selección de Medicamentos</h3>
-                <div id="medicamentos-checkboxes">
-                    </div>
+            <div class="action-buttons">
+                <button onclick="restablecer()" class="btn-restablecer">Restablecer</button>
+                <button onclick="imprimir()" class="btn-imprimir"><i class="fas fa-print"></i> Imprimir</button>
+                <button onclick="guardarTxt()" class="btn-guardar-txt">Guardar TXT</button>
+                <button onclick="guardarPdf()" class="btn-guardar-pdf"><i class="fas fa-file-pdf"></i> Guardar PDF</button>
             </div>
 
-            <div class="bloque-input acciones">
-                <button type="button" id="btn-calcular" class="btn-primario">CALCULAR DOSIS</button>
-                <button type="button" id="btn-manual" class="btn-secundario">CALCULAR MEDICAMENTO MANUAL</button>
+
+            <div class="calculator-container">
+                <h2><i class="fas fa-calculator"></i> Calculadora de Dosis Pediátrica</h2>
+                <div class="calculator-content">
+                    
+                    <section class="columna columna-input">
+                        <h3>Datos de Cálculo y Selección</h3>
+
+                        <div class="bloque-input paciente-data">
+                            <h3>Peso del Paciente Actual</h3>
+                            <div class="peso-container">
+                                <label>Peso Ingresado:</label>
+                                <strong id="peso-display-value">10</strong>
+                                <span class="unidad-selector"><strong id="peso-display-unit">kg</strong></span>
+                            </div>
+                            <p style="font-size:0.8em; color:#888; margin-top: 10px;">
+                                El peso se controla desde la sección superior de datos del paciente.
+                            </p>
+                        </div>
+                        <div class="bloque-input">
+                            <h3>Seleccionar Medicamentos</h3>
+                            <div id="medicamentos-checkboxes">
+                                <p>Cargando medicamentos...</p>
+                            </div>
+                        </div>
+
+                        <div class="bloque-input acciones">
+                            <button type="button" id="btn-calcular" class="btn-primario">CALCULAR DOSIS</button> 
+                            <button type="button" id="btn-manual" class="btn-secundario">CALCULAR MEDICAMENTO MANUAL</button>
+                        </div>
+
+                        <div id="seccion-manual" class="bloque-input seccion-manual" style="display:none;">
+                            <h3>Cálculo de Dosis Manual</h3>
+                            <p class="ejemplo-manual">Ejemplo: Para un medicamento de 5 mg/kg con concentración de 2 mg/mL.</p>
+                            <input type="text" id="nombre-manual" placeholder="Nombre del Medicamento">
+                            <input type="number" id="dosis-manual" placeholder="Dosis (ej. 5.0 mg/kg)" step="0.1">
+                            <input type="number" id="concentracion-manual" placeholder="Concentración (ej. 2.0 mg/mL)" step="0.1">
+                            <button type="button" id="btn-calcular-manual" class="btn-secundario">Añadir Dosis Manual</button>
+                        </div>
+                    </section>
+
+                    <section class="columna columna-output">
+                        <h3>Resultados de Dosis Calculada</h3>
+                        <div id="resultados-dosis">
+                            <p class="mensaje-placeholder">Presiona "CALCULAR DOSIS" para ver los resultados aquí.</p>
+                        </div>
+                    </section>
+                </div>
             </div>
-
-            <div id="seccion-manual" class="bloque-input seccion-manual" style="display:none;">
-                <h3>Cálculo de Dosis Manual</h3>
-                <p class="ejemplo-manual">Ejemplo: Para un medicamento de 5 mg/kg con concentración de 2 mg/mL.</p>
-                <input type="text" id="nombre-manual" placeholder="Nombre del Medicamento">
-                <input type="number" id="dosis-manual" placeholder="Dosis (ej. 5.0 mg/kg)" step="0.1">
-                <input type="number" id="concentracion-manual" placeholder="Concentración (ej. 2.0 mg/mL)" step="0.1">
-                <button type="button" id="btn-calcular-manual" class="btn-secundario">Añadir Dosis Manual</button>
             </div>
+    </div>
 
-        </section>
+    <script>
+        
+        let generoActual = 'M';
+        let informeActualRaw = { presentacion: '', evolucion_ordenes: '' }; 
+        
+        function formatDoc(command, value = null) {
+            document.execCommand(command, false, value);
+        }
 
-        <section class="columna columna-output">
-            <h2>Resultados de Dosis</h2>
-            <div id="resultados-dosis">
-                <p class="mensaje-placeholder">Presiona "CALCULAR DOSIS" para ver los resultados aquí.</p>
-            </div>
-        </section>
-    </main>
-    
-    <footer class="autor-info">
-        <p>Creado por: Dr. Esmayanson de León</p>
-    </footer>
+        function setGenero(genero) {
+            generoActual = genero;
+            document.querySelectorAll('.btn-gender').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${genero === 'M' ? 'masculino' : 'femenino'}`).classList.add('active');
+            aplicarVariables(); 
+        }
+        
+        function aplicarSustitucionGenero(texto, genero) {
+            if (genero === 'F') {
+                // MASCULINO --> FEMENINO
+                texto = texto
+                    .replace(/hipoactivo/gi, 'hipoactiva')
+                    .replace(/eupneico/gi, 'eupneica')
+                    .replace(/despierto/gi, 'despierta')
+                    .replace(/orientado/gi, 'orientada')
+                    .replace(/quejumbroso/gi, 'quejumbrosa')
+                    .replace(/agitado/gi, 'agitada');
+            } else {
+                // FEMENINO --> MASCULINO
+                texto = texto
+                    .replace(/hipoactiva/gi, 'hipoactivo')
+                    .replace(/eupneica/gi, 'eupneico')
+                    .replace(/despierta/gi, 'despierto')
+                    .replace(/orientada/gi, 'orientado')
+                    .replace(/quejumbrosa/gi, 'quejumbroso')
+                    .replace(/agitada/gi, 'agitada');
+            }
+            return texto;
+        }
 
-    <script src="script.js"></script>
+        function construirFraseIntroduccion() {
+            const edad = document.getElementById('edad-input').value;
+            const unidadEdad = document.getElementById('unidad-select').value;
+            const generoText = generoActual === 'M' ? 'masculino' : 'femenina';
+            const pariente = document.getElementById('pariente-select').value;
+            
+            let intro = `Paciente ${generoText} de ${edad} ${unidadEdad} de edad. Es traído por su ${pariente}. `;
+            
+            return intro;
+        }
+        
+        function construirFraseCierre() {
+            const generoCierre = generoActual === 'M' ? 'traído' : 'traída';
+            // Usar el ID del input de peso de la calculadora (ahora en la parte superior)
+            const pesoInput = document.getElementById('peso'); 
+            const peso = pesoInput ? pesoInput.value : 'N/A';
+            
+            // Obtener la unidad activa de los botones de la calculadora
+            const unidadSelector = document.querySelector('.unidad-selector button.activo');
+            const unidadPeso = unidadSelector ? unidadSelector.dataset.unidad : 'kg';
+            
+            let cierre = ` Por tal motivo es ${generoCierre} a este centro de salud. Paciente pesa ${peso} ${unidadPeso}.`;
+            
+            return cierre;
+        }
+
+        function aplicarVariables() {
+            const edad = document.getElementById('edad-input').value;
+            const unidadEdad = document.getElementById('unidad-select').value;
+            const generoText = generoActual === 'M' ? 'masculino' : 'femenina';
+            const pariente = document.getElementById('pariente-select').value;
+            
+            if (!informeActualRaw.presentacion) return; 
+
+            // --- 1. PRESENTACIÓN DE CASO (Añadir/sustituir Género/Edad/Pariente/Cierre) ---
+            let presentacionModificada = informeActualRaw.presentacion;
+            const introDinamica = construirFraseIntroduccion();
+            const fraseCierreDinamica = construirFraseCierre();
+            
+            const hasAgeAndGenderPattern = /(masculino|femenina)\s+de\s+\d+\s+(años|meses)\s+de\s+edad/i;
+            const parientePattern = /los padres|sus padres|la madre|el padre|el tutor|su tutor/gi;
+            
+            if (hasAgeAndGenderPattern.test(presentacionModificada)) {
+                presentacionModificada = presentacionModificada.replace(hasAgeAndGenderPattern, 
+                                                                       `${generoText} de ${edad} ${unidadEdad} de edad`);
+                presentacionModificada = presentacionModificada.replace(parientePattern, `su ${pariente}`);
+            } else {
+                presentacionModificada = introDinamica + presentacionModificada;
+            }
+
+            // Limpia el texto de cierre anterior antes de añadir el nuevo (para evitar duplicación)
+            presentacionModificada = presentacionModificada.replace(/ Por tal motivo es (traído|traída) a este centro de salud\. Paciente pesa \d+(\.\d{1,2})? (libras|kg|lb)\./gi, '');
+
+            presentacionModificada = aplicarSustitucionGenero(presentacionModificada, generoActual);
+            
+            presentacionModificada += fraseCierreDinamica; 
+            
+            document.getElementById('presentacion-caso-editor').innerHTML = presentacionModificada.replace(/\n/g, '<br>');
+
+            // --- 2. EVOLUCIÓN Y ÓRDENES (Solo Sustitución de Adjetivos) ---
+            let evolucionModificada = informeActualRaw.evolucion_ordenes;
+            evolucionModificada = aplicarSustitucionGenero(evolucionModificada, generoActual);
+            
+            document.getElementById('evolucion-ordenes-editor').innerHTML = evolucionModificada.replace(/\n/g, '<br>');
+        }
+        
+        function cargarInforme(motivo, esInicial = false) {
+            document.querySelectorAll('.motivo-item').forEach(item => item.classList.remove('active'));
+            const listItem = Array.from(document.querySelectorAll('.motivo-item')).find(item => item.textContent === motivo);
+            if (listItem) listItem.classList.add('active');
+
+            const datos = dataInformes[motivo] || dataInformes["DIAGNOSTICO NO INCLUIDO EN DATA"];
+            
+            document.getElementById('motivo-titulo').textContent = motivo;
+            
+            informeActualRaw.presentacion = datos.presentacion;
+            informeActualRaw.evolucion_ordenes = datos.evolucion_ordenes;
+
+            aplicarVariables();
+            sincronizarPesoDisplay(); // Llamar para actualizar el display inferior al cargar el informe
+        }
+
+        function inicializarInterfaz() {
+            const motivosLista = Object.keys(dataInformes); 
+            
+            const listaUl = document.getElementById('motivos-lista');
+            listaUl.innerHTML = ''; 
+            
+            motivosLista.forEach(motivo => {
+                const li = document.createElement('li');
+                li.textContent = motivo;
+                li.classList.add('motivo-item');
+                li.onclick = () => cargarInforme(motivo); 
+                listaUl.appendChild(li);
+            });
+
+            if (motivosLista.length > 0) {
+                cargarInforme(motivosLista[0], true);
+            }
+        }
+
+        // =======================================================
+        // 🆕 LÓGICA DE SINCRONIZACIÓN DEL PESO
+        // =======================================================
+        
+        function sincronizarPesoDisplay() {
+            const pesoInput = document.getElementById('peso');
+            const unidadActivaElement = document.querySelector('.unidad-selector button.activo');
+            
+            const pesoDisplayValue = document.getElementById('peso-display-value');
+            const pesoDisplayUnit = document.getElementById('peso-display-unit');
+            
+            if (pesoInput && unidadActivaElement && pesoDisplayValue && pesoDisplayUnit) {
+                pesoDisplayValue.textContent = pesoInput.value;
+                pesoDisplayUnit.textContent = unidadActivaElement.dataset.unidad;
+            }
+        }
+        
+        function cambiarUnidad(unidad) {
+            const btnLb = document.getElementById('btn-lb');
+            const btnKg = document.getElementById('btn-kg');
+            const inputPeso = document.getElementById('peso');
+            
+            // Lógica de cambio de unidad (solo para la parte superior, la fuente de verdad)
+            if (unidad === 'kg') {
+                btnKg.classList.add('activo');
+                btnLb.classList.remove('activo');
+                inputPeso.placeholder = "Peso en Kilogramos";
+            } else {
+                btnLb.classList.add('activo');
+                btnKg.classList.remove('activo');
+                inputPeso.placeholder = "Peso en Libras";
+            }
+
+            // Sincronizar el display inferior y la frase del informe
+            sincronizarPesoDisplay();
+            aplicarVariables(); 
+        }
+
+        // =======================================================
+        // LÓGICA DE LA CALCULADORA PEDIÁTRICA (motor de cálculo)
+        // =======================================================
+
+        // Constante de conversión de peso: 1 kg = 2.20462 lb
+        const LB_POR_KG = 2.20462; 
+
+        // 💊 Datos de Medicamentos (Fórmulas Anexas)
+        const MEDICAMENTOS = {
+            // Analgésicos y Antipiréticos
+            "Paracetamol (Acetaminofén)": { categoria: "Analgésicos", dosis_mg_kg: 15, concentracion_mg_ml: 24, max_mg: null },
+            "Dipirona (Metamizol)": { categoria: "Analgésicos", dosis_mg_kg: 30, concentracion_mg_ml: 500, max_mg: null },
+            "Neumulubrina": { categoria: "Analgésicos", dosis_mg_kg: 30, concentracion_mg_ml: 500, max_mg: null }, 
+            "Diclofenac": { categoria: "Analgésicos", dosis_mg_kg: 1, concentracion_mg_ml: 15, max_mg: null },
+            "Ketorolaco": { categoria: "Analgésicos", dosis_mg_kg: 0.5, concentracion_mg_ml: 15, max_mg: 30 }, 
+
+            // Anticonvulsivantes
+            "Diazepam (Rectal, IV)": { categoria: "Anticonvulsivantes", dosis_mg_kg: 0.5, concentracion_mg_ml: 5, max_mg: null },
+            "Fenitoína Carga": { categoria: "Anticonvulsivantes", dosis_mg_kg: 20, concentracion_mg_ml: 50, max_mg: null },
+            "Fenitoína Mantenimiento": { categoria: "Anticonvulsivantes", dosis_mg_kg: 7.5, concentracion_mg_ml: 50, max_mg: null },
+
+            // Respiratorios y Reanimación
+            "Adrenalina (Resucitación IV/IO)": { categoria: "Reanimación", dosis_mg_kg: 0.01, concentracion_mg_ml: 1, max_mg: null },
+            "Atropina (Reanimación)": { categoria: "Reanimación", dosis_mg_kg: 0.02, concentracion_mg_ml: 0.4, max_mg: null, min_mg: 0.1 }, 
+            "Salbutamol (Nebulizar)": { categoria: "Respiratorios", dosis_mg_kg: 0.15, concentracion_mg_ml: 5, max_mg: 5 }, 
+
+            // Antihistamínicos y Corticoides
+            "Hidrocortisona (Shock/Asma)": { categoria: "Corticoides", dosis_mg_kg: 7, concentracion_mg_ml: 50, max_mg: null },
+            "Dexametasona (Crup)": { categoria: "Corticoides", dosis_mg_kg: 0.6, concentracion_mg_ml: 4, max_mg: null },
+            "Difenhidramina": { categoria: "Antihistamínicos", dosis_mg_kg: 1.25, concentracion_mg_ml: 2.5, max_mg: null }, 
+
+            // Gastrointestinales
+            "Ranitidina (IV/Oral)": { categoria: "Gastrointestinales", dosis_mg_kg: 2, concentracion_mg_ml: 25, max_mg: null },
+            "Metoclopramida": { categoria: "Gastrointestinales", dosis_mg_kg: 0.15, concentracion_mg_ml: 5, max_mg: null },
+            "Domperidona (Dramidom)": { categoria: "Gastrointestinales", dosis_mg_kg: 0.3, concentracion_mg_ml: 1, max_mg: null }, 
+            "Sertal Simple (Propinox)": { categoria: "Gastrointestinales", dosis_mg_kg: 0.4, concentracion_mg_ml: null, max_mg: null, solo_mg: true } 
+        };
+
+
+        // Función para obtener los medicamentos agrupados por categoría
+        function agruparMedicamentos(meds) {
+            const grupos = {};
+            for (const nombre in meds) {
+                const categoria = meds[nombre].categoria;
+                if (!grupos[categoria]) {
+                    grupos[categoria] = [];
+                }
+                grupos[categoria].push(nombre);
+            }
+            return grupos;
+        }
+
+        // Generar dinámicamente los checkboxes de medicamentos 
+        function generarCheckboxes() {
+            const contenedor = document.getElementById('medicamentos-checkboxes');
+            contenedor.innerHTML = '';
+            const grupos = agruparMedicamentos(MEDICAMENTOS);
+
+            for (const categoria in grupos) {
+                let html = `<div class="medicamento-grupo"><h4>${categoria}</h4>`;
+                grupos[categoria].forEach(nombre => {
+                    const info = MEDICAMENTOS[nombre];
+                    const dosisText = info.dosis_mg_kg;
+                    const concText = info.concentracion_mg_ml ? info.concentracion_mg_ml + ' mg/mL' : 'N/A';
+                    
+                    const safeId = `med-${nombre.replace(/\s|\(|\)/g, '-')}`;
+                    
+                    html += `
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="${safeId}" name="medicamentos" value="${nombre}">
+                            <label for="${safeId}" title="Dosis: ${dosisText} mg/kg, Conc: ${concText}">${nombre}</label>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                contenedor.innerHTML += html;
+            }
+        }
+
+        // --------------------------------------------------------------------------------
+        // Lógica de Validación y Conversión
+        // --------------------------------------------------------------------------------
+
+        // Función de conversión de Libras a Kilogramos
+        function lbToKg(libras) {
+            return libras / LB_POR_KG;
+        }
+
+        // Función principal de validación y obtención de peso en kg
+        function obtenerPesoKg() {
+            const inputPeso = document.getElementById('peso'); // Ahora en la parte superior
+            const pesoString = inputPeso ? inputPeso.value : '';
+
+            if (!pesoString || isNaN(parseFloat(pesoString)) || parseFloat(pesoString) <= 0) {
+                mostrarError("Por favor, ingrese un valor de peso válido y positivo.");
+                return null;
+            }
+
+            let peso = parseFloat(pesoString);
+            const unidadActivaElement = document.querySelector('.unidad-selector button.activo');
+            const unidadActiva = unidadActivaElement ? unidadActivaElement.dataset.unidad : 'kg';
+
+            // Convertir a KG si la unidad activa es Libras (lb) 
+            if (unidadActiva === 'lb') {
+                peso = lbToKg(peso);
+            }
+            
+            return peso; // Peso en Kilogramos (kg)
+        }
+
+        // --------------------------------------------------------------------------------
+        // Motor de Cálculo 
+        // --------------------------------------------------------------------------------
+
+        // Función de cálculo de dosis para un medicamento
+        function calcularDosis(nombre, info, peso_kg) {
+            const dosis_mg_kg = info.dosis_mg_kg;
+            const concentracion_mg_ml = info.concentracion_mg_ml;
+            const max_mg = info.max_mg;
+            const min_mg = info.min_mg;
+            const solo_mg = info.solo_mg;
+
+            // 1. Cálculo de Dosis Total (mg)
+            let dosisTotalMg = peso_kg * dosis_mg_kg;
+
+            // 2. Aplicar dosis mínima
+            if (min_mg && dosisTotalMg < min_mg) {
+                dosisTotalMg = min_mg;
+            }
+
+            // 3. Aplicar dosis máxima
+            let dosisMaximaMg = null;
+            if (max_mg) {
+                dosisMaximaMg = max_mg;
+                if (dosisTotalMg > max_mg) {
+                    // La dosis normal no excederá la dosis máxima
+                    dosisTotalMg = max_mg;
+                }
+            }
+
+            // 4. Cálculo de Volumen (mL)
+            let dosisVolumenMl = null;
+            let dosisMaximaVolumenMl = null;
+
+            if (concentracion_mg_ml && !solo_mg) {
+                dosisVolumenMl = dosisTotalMg / concentracion_mg_ml;
+
+                if (max_mg && concentracion_mg_ml) {
+                    dosisMaximaVolumenMl = max_mg / concentracion_mg_ml;
+                }
+            }
+
+            // Formatear resultados a 2 decimales
+            dosisTotalMg = parseFloat(dosisTotalMg).toFixed(2);
+            dosisVolumenMl = dosisVolumenMl !== null ? parseFloat(dosisVolumenMl).toFixed(2) : null;
+            dosisMaximaMg = dosisMaximaMg !== null ? parseFloat(dosisMaximaMg).toFixed(2) : null;
+            dosisMaximaVolumenMl = dosisMaximaVolumenMl !== null ? parseFloat(dosisMaximaVolumenMl).toFixed(2) : null;
+
+            return {
+                nombre: nombre,
+                dosis_mg: dosisTotalMg,
+                dosis_ml: dosisVolumenMl,
+                max_mg: dosisMaximaMg,
+                max_ml: dosisMaximaVolumenMl,
+                concentracion: concentracion_mg_ml, 
+                dosis_mg_kg: dosis_mg_kg 
+            };
+        }
+        
+        // Agrupa los resultados calculados por categoría para la visualización
+        function agruparMedicamentosConResultado(resultados) {
+            const grupos = {};
+            resultados.forEach(res => {
+                let categoria = 'Otros';
+                const info = MEDICAMENTOS[res.nombre];
+                if (info) {
+                    categoria = info.categoria;
+                } else if (res.nombre.startsWith('(MANUAL)')) {
+                    categoria = 'Cálculo Manual';
+                }
+
+                if (!grupos[categoria]) {
+                    grupos[categoria] = [];
+                }
+                grupos[categoria].push(res);
+            });
+            return grupos;
+        }
+
+
+        // Función para mostrar los resultados en la columna derecha
+        function mostrarResultados(resultados, peso_kg) {
+            const contenedor = document.getElementById('resultados-dosis');
+            contenedor.innerHTML = '';
+
+            if (resultados.length === 0) {
+                contenedor.innerHTML = '<p class="mensaje-placeholder">No se seleccionó ningún medicamento o el peso no es válido.</p>';
+                return;
+            }
+
+            // Muestra el peso ya convertido a kg
+            let html = `<h3>Peso del Paciente (en Kg para cálculo): ${peso_kg.toFixed(2)} kg</h3>`;
+
+            const resultadosAgrupados = agruparMedicamentosConResultado(resultados);
+
+            for (const categoria in resultadosAgrupados) {
+                html += `<div class="medicamento-grupo"><h4>${categoria}</h4>`;
+                
+                resultadosAgrupados[categoria].forEach(res => {
+                    html += `
+                        <div class="resultado-item">
+                            <h4>${res.nombre} <span style="font-size:0.8em; color: #777;">(${res.dosis_mg_kg} mg/kg)</span></h4>
+                            <p><strong>Dosis Total:</strong> ${res.dosis_mg} mg</p>
+                    `;
+
+                    // Mostrar Volumen si aplica
+                    if (res.dosis_ml !== null) {
+                        html += `<p><strong>Volumen a Administrar:</strong> <span style="color:#008000; font-weight:bold;">${res.dosis_ml} mL</span> (Conc: ${res.concentracion} mg/mL)</p>`;
+                    } else {
+                        html += `<p><strong>Volumen:</strong> N/A (Concentración no definida o sólo mg)</p>`;
+                    }
+
+                    // Mostrar Dosis Máxima si aplica
+                    if (res.max_mg !== null) {
+                        html += `<p><strong>Dosis Máxima:</strong> ${res.max_mg} mg`;
+                        if (res.max_ml !== null) {
+                            html += ` / ${res.max_ml} mL`;
+                        }
+                        html += `</p>`;
+                    }
+
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            }
+
+            contenedor.innerHTML = html;
+        }
+
+        // Manejador de eventos principal: CALCULAR DOSIS
+        function handleCalcularDosis() {
+            // 1. Limpiar errores
+            limpiarErrores();
+
+            // 2. Obtener y validar el peso en kg
+            const peso_kg = obtenerPesoKg();
+            if (peso_kg === null) return;
+
+            // 3. Obtener medicamentos seleccionados 
+            const checkboxes = document.querySelectorAll('#medicamentos-checkboxes input[type="checkbox"]:checked');
+            const medicamentosSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+
+            // 4. Calcular dosis para cada medicamento
+            const resultadosPredefinidos = medicamentosSeleccionados.map(nombre => {
+                const info = MEDICAMENTOS[nombre];
+                return info ? calcularDosis(nombre, info, peso_kg) : null;
+            }).filter(res => res !== null);
+
+            // 5. Combinar resultados predefinidos y manuales (si los hay)
+            const resultadosFinales = resultadosPredefinidos.concat(resultadosManuales);
+            
+            // 6. Mostrar resultados
+            mostrarResultados(resultadosFinales, peso_kg);
+        }
+
+        // --------------------------------------------------------------------------------
+        // Lógica de Cálculo Manual 
+        // --------------------------------------------------------------------------------
+
+        // Array para guardar resultados manuales temporalmente junto a los predefinidos
+        let resultadosManuales = [];
+
+        function handleCalcularManual() {
+            limpiarErrores();
+
+            const peso_kg = obtenerPesoKg();
+            if (peso_kg === null) return;
+
+            const nombre = document.getElementById('nombre-manual').value.trim();
+            const dosisMgKg = parseFloat(document.getElementById('dosis-manual').value);
+            const concentracionMgMl = parseFloat(document.getElementById('concentracion-manual').value);
+
+            if (!nombre || isNaN(dosisMgKg) || dosisMgKg <= 0 || isNaN(concentracionMgMl) || concentracionMgMl <= 0) {
+                mostrarError("Ingrese un nombre, dosis (mg/kg) y concentración (mg/mL) válidos y positivos para el cálculo manual.");
+                return;
+            }
+
+            const infoManual = {
+                categoria: "Cálculo Manual",
+                dosis_mg_kg: dosisMgKg,
+                concentracion_mg_ml: concentracionMgMl,
+                max_mg: null,
+                min_mg: null,
+                solo_mg: false
+            };
+
+            // Calcular y añadir el resultado manual
+            const resultado = calcularDosis(`(MANUAL) ${nombre}`, infoManual, peso_kg);
+            
+            resultadosManuales.push(resultado);
+
+            // Limpiar campos del formulario manual y notificar
+            document.getElementById('nombre-manual').value = '';
+            document.getElementById('dosis-manual').value = '';
+            document.getElementById('concentracion-manual').value = '';
+            
+            // Forzar el re-cálculo y la visualización de todos los resultados (predefinidos + manuales)
+            handleCalcularDosis(); 
+            document.getElementById('seccion-manual').style.display = 'none'; // Ocultar después de calcular
+            alert(`✅ Dosis manual de ${nombre} calculada y añadida a los resultados.`);
+        }
+
+
+        // --------------------------------------------------------------------------------
+        // Utilidades y Listeners
+        // --------------------------------------------------------------------------------
+
+        function mostrarError(mensaje) {
+            const contenedor = document.getElementById('resultados-dosis');
+            contenedor.innerHTML = `<div class="error-message">${mensaje}</div>`;
+        }
+
+        function limpiarErrores() {
+            // Se limpia implícitamente al llamar a mostrarResultados o mostrarError
+        }
+
+        // =======================================================
+        // FUNCIONES DE ACCIÓN (Guardar/Imprimir)
+        // =======================================================
+
+        function copiarContenido(elementId) {
+            const editor = document.getElementById(elementId);
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = editor.innerText;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            tempTextArea.setSelectionRange(0, 99999); 
+            
+            try {
+                const successful = document.execCommand('copy');
+                const msg = successful ? 'copiado' : 'falló al copiar';
+                alert(`📋 Contenido ${msg} al portapapeles!`);
+            } catch (err) {
+                console.error('Error al intentar copiar:', err);
+                alert('❌ Error: El navegador no permitió copiar. Inténtalo manualmente.');
+            }
+            
+            document.body.removeChild(tempTextArea);
+        }
+
+        function restablecer() { 
+            const motivoActual = document.getElementById('motivo-titulo').textContent;
+            cargarInforme(motivoActual, false); 
+            alert(`✅ Campos de Presentación, Evolución y Órdenes restablecidos para: ${motivoActual}`);
+        }
+
+        function imprimir() { 
+            window.print();
+        }
+
+        function guardarTxt() { 
+            const titulo = document.getElementById('motivo-titulo').textContent;
+            const presentacion = document.getElementById('presentacion-caso-editor').innerText; 
+            const evolucionOrdenes = document.getElementById('evolucion-ordenes-editor').innerText;
+            const creador = document.querySelector('.document-footer p').textContent;
+            const peso = document.getElementById('peso').value;
+            const unidad = document.querySelector('.unidad-selector button.activo').dataset.unidad;
+            
+            const contenido = 
+                `--- INFORME CLÍNICO DE EMERGENCIA ---\n` +
+                `Motivo de Emergencia: ${titulo}\n` +
+                `Peso: ${peso} ${unidad}\n` +
+                `-----------------------------------------\n\n` +
+                `[PRESENTACIÓN DE CASO]\n` +
+                `${presentacion}\n\n` +
+                `[EVOLUCIÓN Y ÓRDENES MÉDICAS]\n` +
+                `${evolucionOrdenes}\n\n` +
+                `-----------------------------------------\n` +
+                `${creador}\n`;
+
+            const nombreArchivo = `${titulo.replace(/[^a-z0-9]/gi, '_')}_Informe.txt`;
+
+            const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = nombreArchivo; 
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`💾 Archivo '${nombreArchivo}' generado y descargado.`);
+        }
+
+        async function guardarPdf() { 
+            const input = document.getElementById('informe-sheet');
+            const titulo = document.getElementById('motivo-titulo').textContent;
+            const nombreArchivo = `${titulo.replace(/[^a-z0-9]/gi, '_')}_Informe.pdf`;
+            
+            const toolbar = document.querySelector('.toolbar');
+            const patientControls = document.querySelector('.patient-controls'); 
+            const calculatorContainer = document.querySelector('.calculator-container'); 
+            
+            // Ocultar las interfaces no deseadas antes de la captura
+            toolbar.style.display = 'none';
+            patientControls.style.display = 'none';
+            calculatorContainer.style.display = 'none'; 
+
+            try {
+                const canvas = await html2canvas(input, { scale: 2 });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new window.jspdf.jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const imgWidth = 210;
+                const pageHeight = 297;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                pdf.save(nombreArchivo);
+                alert(`🎉 Archivo PDF '${nombreArchivo}' generado y descargado.`);
+            } catch (error) {
+                console.error("Error al generar PDF:", error);
+                alert("Hubo un error al generar el PDF. Revisa la consola para más detalles.");
+            } finally {
+                // Volver a mostrar las barras después de la captura
+                toolbar.style.display = 'flex';
+                patientControls.style.display = 'flex'; 
+                calculatorContainer.style.display = 'block'; 
+            }
+        }
+
+
+        // Inicialización de la aplicación (Calculadora y Reporte)
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicialización del Reporte (Parte superior)
+            inicializarInterfaz(); 
+
+            // Inicialización de la Calculadora (Parte inferior)
+            generarCheckboxes(); // Genera los checkboxes al cargar 
+
+            // Listeners para el cambio de unidad de peso (Solo la parte superior)
+            const btnLb = document.getElementById('btn-lb');
+            const btnKg = document.getElementById('btn-kg');
+
+            // Escuchar clics en los botones de unidad
+            btnLb.addEventListener('click', () => cambiarUnidad('lb'));
+            btnKg.addEventListener('click', () => cambiarUnidad('kg'));
+
+
+            // Listener para el botón principal CALCULAR DOSIS
+            document.getElementById('btn-calcular').addEventListener('click', handleCalcularDosis);
+
+            // Listener para el botón de cálculo manual 
+            document.getElementById('btn-manual').addEventListener('click', () => {
+                const seccionManual = document.getElementById('seccion-manual');
+                // Muestra u oculta la sección modal/formulario
+                seccionManual.style.display = seccionManual.style.display === 'none' ? 'block' : 'none';
+                // Reiniciar el array de resultados manuales al abrir el formulario
+                resultadosManuales = [];
+            });
+
+            // Listener para el botón de cálculo manual dentro del formulario
+            document.getElementById('btn-calcular-manual').addEventListener('click', handleCalcularManual);
+            
+            // Sincronización inicial del peso
+            sincronizarPesoDisplay();
+        });
+
+    </script>
 </body>
 </html>
